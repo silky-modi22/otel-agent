@@ -52,6 +52,22 @@ source .venv/bin/activate && python -m agent --duration 10 --interval 0.5   # te
 
 Details, regional endpoints, and verification: **[docs/beginner-guide.md](docs/beginner-guide.md)** (Phase B).
 
+### Real OpenAI traffic → Collector → New Relic
+
+To observe **real OpenAI Python SDK** calls (not synthetic spans and not the Gemini `/ingest` demo), use OpenTelemetry’s **OpenAI instrumentation** and the same OTLP collector, then forward to New Relic.
+
+1. **NR collector:** follow **[docs/nr-collector-checklist.md](docs/nr-collector-checklist.md)** (copy `collector-config-nr.yaml`, region, `NEW_RELIC_LICENSE_KEY`, `./scripts/run-collector-nr.sh`).
+2. **Example app:** follow **[examples/openai_otel/README.md](examples/openai_otel/README.md)** — install `examples/openai_otel/requirements.txt`, set `OPENAI_API_KEY` and `OTEL_SERVICE_NAME`, run `python examples/openai_otel/client.py`.
+3. **New Relic UI:** find your service under OpenTelemetry / traces (allow 1–2 minutes).
+
+**Privacy:** avoid enabling Gen AI **message content** capture unless you intend prompts/responses to be stored in NR; see the example README.
+
+### GitHub live events → ingest (demo)
+
+Poll a **public** repo’s activity feed and send each new event to `/ingest` (stdlib poller, no extra deps). Put your token in `export GITHUB_TOKEN=...` or a gitignored **`.github_token`** file in the repo root.
+
+See **[examples/github_ingest/README.md](examples/github_ingest/README.md)**.
+
 ### Agent CLI
 
 | Flag | Default | Purpose |
@@ -65,6 +81,37 @@ Details, regional endpoints, and verification: **[docs/beginner-guide.md](docs/b
 | `--metric-interval-ms` | `5000` | Metric export period |
 
 Environment variables: `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`, `DEPLOYMENT_ENVIRONMENT`.
+
+### AI-assisted ingest (HTTP + Gemini)
+
+A second mode turns **arbitrary JSON or text** into structured OpenTelemetry (traces, logs, and fixed-name metrics) using the **Gemini API**, then exports **OTLP/HTTP** to the same collector as the synthetic agent.
+
+**Prerequisites:** A Gemini API key available to the server process: `export GEMINI_API_KEY=...`, or a **one-line** gitignored file `.gemini_api_key` in the project root, or `GEMINI_API_KEY_FILE` pointing at a file. Do not send secrets or sensitive personal data to the model.
+
+**Terminal 1** (collector): `./scripts/run-collector.sh`  
+
+**Terminal 2** (HTTP server):
+
+```bash
+source .venv/bin/activate
+export GEMINI_API_KEY="your-key"
+python -m agent serve --http-port 8000 --otel-endpoint http://localhost:4318
+```
+
+**Send data** (example):
+
+```bash
+curl -sS -X POST http://127.0.0.1:8000/ingest \
+  -H "Content-Type: application/json" \
+  -d '{"message":"checkout failed","cart_id":"c42","latency_ms":120}' | jq .
+```
+
+Optional header: `X-Service-Name: my-service` is passed to the model as a hint for `service.name` metadata on the ingest span.
+
+- `GET /health` — returns `{"status":"ok","gemini_api_key_set":...}` without calling Gemini.
+- **Metrics** from the model are limited to counters `ai.ingest.events` and histograms `ai.ingest.latency_ms` (see [agent/telemetry_ir.py](agent/telemetry_ir.py)).
+
+Serve flags: `--otel-endpoint`, `--service-name` (default `otel-ai-ingest`), `--environment`, `--metric-interval-ms`, `--http-host`, `--http-port`, `--gemini-model` (defaults to env `GEMINI_MODEL` or `gemini-2.5-flash` in code).
 
 ## Custom collector build
 

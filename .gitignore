@@ -1,7 +1,13 @@
 # Local IDE / assistant artifacts (do not publish)
 .specstory/
 
+# Local secrets (e.g. GEMINI_API_KEY for `python -m agent serve`)
+.env
+.gemini_api_key
+.github_token
+
 .venv/
+examples/openai_otel/.venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/

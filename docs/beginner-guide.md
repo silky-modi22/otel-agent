@@ -107,6 +107,8 @@ Use **two terminal tabs or windows** in the **same repo folder**.
 
 ## Phase B — Send the same data to New Relic
 
+Short checklist (copy config, region, license key, run script): **[nr-collector-checklist.md](nr-collector-checklist.md)**.
+
 Now the collector **still receives** OTLP on **4318** and sends batches to **New Relic only** (no **debug** stdout — Terminal 1 stays mostly info logs). Use Phase A’s `collector-config.yaml` if you want full telemetry dumps in the terminal.
 
 ### Prerequisites (confirm before you run)
@@ -158,6 +160,8 @@ Set **`otlphttp/newrelic`** → **`endpoint`** in `collector/collector-config-nr
    ```
 
 6. **In New Relic**, open **APM / OpenTelemetry** or **Logs** (depending on what you use) and look for the service name **`otel-sample-agent`** (or whatever you set with `--service-name`). It may take **1–2 minutes** to appear.
+
+To send **real OpenAI SDK** traffic (Gen AI spans/metrics) instead of the synthetic sample agent, use **[examples/openai_otel/README.md](../examples/openai_otel/README.md)** with the same collector on **4318**.
 
 ### Convenience script (checks key + config file)
 
@@ -220,5 +224,7 @@ The agent **never** holds your New Relic key; only the **collector config** + **
 | `collector/builder-config.yaml` | List of collector components used when **building** `otel-custom`. |
 | `scripts/build-collector.sh` | Builds `otel-custom` using Docker (ocb). |
 | `scripts/run-collector-nr.sh` | Starts collector with NR config if `NEW_RELIC_LICENSE_KEY` and `collector/collector-config-nr.yaml` exist. |
+| `docs/nr-collector-checklist.md` | Short NR config + key + run checklist. |
+| `examples/openai_otel/` | Real OpenAI chat completion + OTEL Gen AI instrumentation → OTLP → collector / NR. |
 
 The NR example omits **debug** so export noise stays low; add **`debug`** back to pipelines temporarily if you want local dumps while still forwarding to NR.

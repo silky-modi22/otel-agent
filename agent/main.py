@@ -5,26 +5,17 @@ from __future__ import annotations
 import argparse
 import os
 import random
-import socket
 import sys
 import time
 from typing import Sequence
-from urllib.parse import urlparse
 
 from opentelemetry import metrics, trace
-from opentelemetry._logs import LogRecord, get_logger, set_logger_provider
+from opentelemetry._logs import LogRecord, get_logger
 from opentelemetry._logs.severity import SeverityNumber
 from opentelemetry.context import get_current
-from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk._logs import LoggerProvider
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+from .collector_check import ensure_collector_tcp
+from .otel_bootstrap import setup_otel
 
 DEFAULT_ROUTES: Sequence[str] = ("/api/users", "/api/orders", "/health")
 
@@ -80,71 +71,21 @@ def _parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def _normalize_otlp_endpoint(raw: str) -> str:
-    base = raw.strip().rstrip("/")
-    return base + "/"
-
-
-def _ensure_collector_tcp(endpoint: str) -> None:
-    """Fail fast if OTLP HTTP collector is not listening (localhost only)."""
-    if os.environ.get("SKIP_COLLECTOR_CHECK") == "1":
-        return
-    raw = endpoint.strip().rstrip("/")
-    if not raw.startswith("http"):
-        raw = "http://" + raw
-    u = urlparse(raw)
-    host = (u.hostname or "").lower()
-    if host not in ("localhost", "127.0.0.1", "::1"):
-        return
-    port = u.port or 4318
-    try:
-        socket.create_connection((u.hostname or "localhost", port), timeout=1.5)
-    except OSError as exc:
-        print(
-            "ERROR: No OpenTelemetry Collector on "
-            f"{u.hostname}:{port} ({exc}).\n"
-            "Start it in another terminal first:\n"
-            "  ./scripts/run-collector.sh\n"
-            "or:\n"
-            "  export NEW_RELIC_LICENSE_KEY=... && ./scripts/run-collector-nr.sh\n"
-            "Skip: SKIP_COLLECTOR_CHECK=1 python -m agent ...",
-            file=sys.stderr,
-        )
-        raise SystemExit(1) from exc
-
-
 def _pick_http_status(error_rate: float) -> int:
     if random.random() < error_rate:
         return random.choice((500, 502, 503))
     return random.choice((200, 201, 204))
 
 
-def main() -> None:
+def run_emit_loop() -> None:
     args = _parse_args()
-    _ensure_collector_tcp(args.endpoint)
-    os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = _normalize_otlp_endpoint(args.endpoint)
-
-    resource = Resource.create(
-        {
-            "service.name": args.service_name,
-            "deployment.environment": args.environment,
-        }
+    ensure_collector_tcp(args.endpoint)
+    providers = setup_otel(
+        args.endpoint,
+        service_name=args.service_name,
+        environment=args.environment,
+        metric_interval_ms=args.metric_interval_ms,
     )
-
-    tracer_provider = TracerProvider(resource=resource)
-    tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
-    trace.set_tracer_provider(tracer_provider)
-
-    metric_reader = PeriodicExportingMetricReader(
-        OTLPMetricExporter(),
-        export_interval_millis=args.metric_interval_ms,
-    )
-    meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
-    metrics.set_meter_provider(meter_provider)
-
-    logger_provider = LoggerProvider(resource=resource)
-    logger_provider.add_log_record_processor(BatchLogRecordProcessor(OTLPLogExporter()))
-    set_logger_provider(logger_provider)
 
     otel_logger = get_logger(__name__)
     tracer = trace.get_tracer(__name__)
@@ -215,12 +156,17 @@ def main() -> None:
     except KeyboardInterrupt:
         pass
     finally:
-        tracer_provider.force_flush()
-        tracer_provider.shutdown()
-        meter_provider.force_flush()
-        meter_provider.shutdown()
-        logger_provider.force_flush()
-        logger_provider.shutdown()
+        providers.shutdown()
+
+
+def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "serve":
+        from .serve import run_serve
+
+        sys.argv = [sys.argv[0]] + sys.argv[2:]
+        run_serve()
+        return
+    run_emit_loop()
 
 
 if __name__ == "__main__":
