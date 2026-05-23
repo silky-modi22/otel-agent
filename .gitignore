@@ -5,6 +5,7 @@
 .env
 .gemini_api_key
 .github_token
+.new_relic_license_key
 
 .venv/
 examples/openai_otel/.venv/

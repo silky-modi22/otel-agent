@@ -24,7 +24,9 @@ cat << 'EOF'
   What you should see:
   - This script prints the command, then often little or no output
     while the agent runs (that is normal).
-  - Watch TERMINAL 1 for the live telemetry dump (debug exporter).
+  - If Terminal 1 uses collector-config-nr.yaml, it stays quiet on success.
+    Check New Relic UI for service.name otel-sample-agent (wait 1–2 min).
+  - If Terminal 1 uses collector-config.yaml (debug), watch for ResourceSpans dumps.
 
   If you see "Connection refused" to port 4318, start Terminal 1 first.
 ================================================================
@@ -57,4 +59,9 @@ fi
 
 echo "Running: python -m agent $*"
 echo ""
-exec python -m agent "$@"
+python -m agent "$@"
+echo ""
+echo "Agent finished. Telemetry was sent to localhost:4318."
+echo "If Terminal 1 uses run-collector-nr.sh, silence there usually means success."
+echo "Check New Relic → APM / OpenTelemetry / Traces for service: otel-sample-agent"
+echo "(allow 1–2 minutes for data to appear)."

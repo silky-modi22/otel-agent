@@ -16,7 +16,34 @@ if [[ ! -f "$CONFIG" ]]; then
   exit 1
 fi
 
-cat << EOF
+IS_NR_CONFIG=0
+case "$CONFIG" in
+  *collector-config-nr.yaml*) IS_NR_CONFIG=1 ;;
+esac
+
+if [[ "$IS_NR_CONFIG" -eq 1 ]]; then
+  cat << EOF
+
+================================================================
+  TERMINAL 1 — OpenTelemetry Collector → New Relic (this window)
+================================================================
+  Role: Receives OTLP on localhost:4318 and forwards to New Relic.
+
+  What you should see:
+  - "Everything is ready. Begin running and processing data."
+  - Then mostly silence (NR config has no debug dump).
+  - Export problems show as error lines (403, no such host, Dropping data).
+
+  Verify in New Relic UI (1–2 min after Terminal 2 runs):
+  service.name = otel-sample-agent
+
+  Config: $CONFIG
+  Press Ctrl+C here to stop the collector.
+================================================================
+
+EOF
+else
+  cat << EOF
 
 ================================================================
   TERMINAL 1 — OpenTelemetry Collector (this window)
@@ -35,5 +62,6 @@ cat << EOF
 ================================================================
 
 EOF
+fi
 
 exec "$BIN" --config="$CONFIG"
