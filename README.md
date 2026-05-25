@@ -98,6 +98,12 @@ export GEMINI_API_KEY="your-key"
 python -m agent serve --http-port 8000 --otel-endpoint http://localhost:4318
 ```
 
+**Minimal pipeline dashboard:** open `http://127.0.0.1:8000/` after starting `python -m agent serve`.
+
+- Start/stop collector (local debug or New Relic mode)
+- Trigger one-shot pipelines: synthetic agent, sample AI ingest, GitHub poll once
+- View status checks and recent collector/job output
+
 **Send data** (example):
 
 ```bash

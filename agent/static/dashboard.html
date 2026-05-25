@@ -1,0 +1,1092 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Telemetry Playground</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=DM+Serif+Display:ital@0;1&display=swap"
+    />
+    <style>
+      :root {
+        --bg: #080c14;
+        --surface: #0f1520;
+        --surface-2: #141c2b;
+        --border: #1e2d45;
+        --border-soft: #172236;
+        --text: #e8edf5;
+        --text-soft: #8b9cb8;
+        --text-muted: #5c6d88;
+        --accent: #5eead4;
+        --accent-dim: rgba(94, 234, 212, 0.12);
+        --accent-ring: rgba(94, 234, 212, 0.25);
+        --warn: #fbbf24;
+        --bad: #f87171;
+        --radius: 12px;
+        --radius-sm: 8px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "IBM Plex Sans", sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(
+            900px 500px at 15% -5%,
+            rgba(30, 58, 90, 0.45),
+            transparent 70%
+          ),
+          radial-gradient(
+            700px 400px at 85% 0%,
+            rgba(20, 70, 80, 0.25),
+            transparent 65%
+          );
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      main {
+        position: relative;
+        z-index: 1;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 40px 20px 64px;
+      }
+
+      /* ── Hero ── */
+      .hero {
+        margin-bottom: 36px;
+      }
+
+      .hero-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 12px;
+      }
+
+      .hero-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-family: "DM Serif Display", serif;
+        font-size: clamp(28px, 6vw, 40px);
+        font-weight: 400;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+      }
+
+      .tagline {
+        margin: 0;
+        color: var(--text-soft);
+        font-size: 15px;
+        max-width: 520px;
+        line-height: 1.55;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        font-size: 12px;
+        color: var(--text-soft);
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--text-muted);
+        flex-shrink: 0;
+      }
+
+      .dot.ok {
+        background: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-ring);
+      }
+
+      .dot.bad {
+        background: var(--bad);
+      }
+
+      /* ── Instructions ── */
+      .guide {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        border-radius: var(--radius);
+        padding: 16px 18px;
+        margin-bottom: 28px;
+      }
+
+      .guide summary {
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-soft);
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        user-select: none;
+      }
+
+      .guide summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .guide summary::after {
+        content: "▾";
+        font-size: 11px;
+        color: var(--text-muted);
+        transition: transform 0.2s;
+      }
+
+      .guide[open] summary::after {
+        transform: rotate(180deg);
+      }
+
+      .guide-body {
+        margin-top: 14px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .guide-step {
+        display: grid;
+        grid-template-columns: 22px 1fr;
+        gap: 10px;
+        align-items: start;
+      }
+
+      .guide-num {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--accent-dim);
+        color: var(--accent);
+        font-size: 11px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+
+      .guide-text {
+        color: var(--text-soft);
+        font-size: 13px;
+      }
+
+      .guide-text strong {
+        color: var(--text);
+        font-weight: 500;
+      }
+
+      code {
+        font-family: "IBM Plex Mono", "SF Mono", monospace;
+        font-size: 12px;
+        background: var(--surface-2);
+        border: 1px solid var(--border-soft);
+        border-radius: 4px;
+        padding: 1px 5px;
+        color: var(--accent);
+      }
+
+      /* ── Pipeline steps ── */
+      .pipeline {
+        display: grid;
+        gap: 0;
+      }
+
+      .step {
+        background: var(--surface);
+        border: 1px solid var(--border-soft);
+        padding: 18px 18px 20px;
+      }
+
+      .step:first-child {
+        border-radius: var(--radius) var(--radius) 0 0;
+      }
+
+      .step:last-child {
+        border-radius: 0 0 var(--radius) var(--radius);
+      }
+
+      .step + .step {
+        border-top: none;
+      }
+
+      .step-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .step-num {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--accent-dim);
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .step-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .step-desc {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-left: auto;
+      }
+
+      .btn-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      button {
+        border: 1px solid var(--border);
+        background: var(--surface-2);
+        color: var(--text);
+        padding: 9px 14px;
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        font-family: inherit;
+        cursor: pointer;
+        transition: border-color 0.15s, background 0.15s, opacity 0.15s;
+        white-space: nowrap;
+      }
+
+      button:hover:enabled {
+        border-color: #2e4568;
+        background: #1a2438;
+      }
+
+      button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      button.primary {
+        background: var(--accent-dim);
+        border-color: rgba(94, 234, 212, 0.3);
+        color: var(--accent);
+        font-weight: 500;
+      }
+
+      button.primary:hover:enabled {
+        background: rgba(94, 234, 212, 0.18);
+        border-color: rgba(94, 234, 212, 0.5);
+      }
+
+      button.ghost {
+        background: transparent;
+        border-color: transparent;
+        color: var(--text-muted);
+        padding: 9px 10px;
+      }
+
+      button.ghost:hover:enabled {
+        color: var(--text-soft);
+        background: var(--surface-2);
+        border-color: var(--border-soft);
+      }
+
+      button.danger {
+        color: var(--bad);
+        border-color: rgba(248, 113, 113, 0.25);
+      }
+
+      button.danger:hover:enabled {
+        background: rgba(248, 113, 113, 0.08);
+        border-color: rgba(248, 113, 113, 0.4);
+      }
+
+      /* ── Status strip ── */
+      .status-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 20px 0 28px;
+      }
+
+      .status-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border-soft);
+        background: var(--surface);
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      .status-item.ok {
+        color: var(--text-soft);
+        border-color: rgba(94, 234, 212, 0.15);
+      }
+
+      .status-item .dot {
+        width: 6px;
+        height: 6px;
+      }
+
+      /* ── Result toast ── */
+      .result {
+        min-height: 20px;
+        margin-top: 16px;
+        font-size: 13px;
+        color: var(--text-soft);
+        padding: 0 2px;
+      }
+
+      .result.error {
+        color: var(--bad);
+      }
+
+      /* ── Output panel ── */
+      .output-section {
+        margin-top: 28px;
+      }
+
+      .output-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+
+      .output-head h2 {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+
+      .tab-bar {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 8px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+      }
+
+      .tab {
+        padding: 6px 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--text-muted);
+        font-size: 12px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: color 0.15s, background 0.15s;
+      }
+
+      .tab:hover {
+        color: var(--text-soft);
+        background: var(--surface);
+      }
+
+      .tab.active {
+        color: var(--accent);
+        background: var(--accent-dim);
+        border-color: rgba(94, 234, 212, 0.2);
+      }
+
+      pre {
+        margin: 0;
+        border-radius: var(--radius);
+        border: 1px solid var(--border-soft);
+        background: var(--surface);
+        color: #a8b8d0;
+        min-height: 160px;
+        max-height: 280px;
+        overflow: auto;
+        padding: 14px;
+        font-size: 12px;
+        line-height: 1.5;
+        font-family: "IBM Plex Mono", "SF Mono", monospace;
+      }
+
+      .log-pane {
+        display: none;
+      }
+
+      .log-pane.active {
+        display: block;
+      }
+
+      /* ── Advanced (collapsed) ── */
+      .advanced {
+        margin-top: 20px;
+      }
+
+      .advanced summary {
+        cursor: pointer;
+        font-size: 12px;
+        color: var(--text-muted);
+        list-style: none;
+        user-select: none;
+      }
+
+      .advanced summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .advanced-body {
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+      }
+
+      input[type="text"] {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--surface);
+        color: var(--text);
+        padding: 9px 11px;
+        font-size: 13px;
+        font-family: inherit;
+        outline: none;
+      }
+
+      input[type="text"]:focus {
+        border-color: rgba(94, 234, 212, 0.4);
+      }
+
+      @media (max-width: 560px) {
+        main {
+          padding: 28px 16px 48px;
+        }
+
+        .hero-top {
+          flex-direction: column;
+        }
+
+        .step-desc {
+          display: none;
+        }
+
+        .btn-row {
+          flex-direction: column;
+        }
+
+        .btn-row button {
+          width: 100%;
+          text-align: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="hero-top">
+          <h1>Telemetry Playground</h1>
+          <div class="hero-controls">
+            <div id="connection-chip" class="chip">
+              <span class="dot"></span>
+              <span>Connecting…</span>
+            </div>
+            <button id="hero-connect-btn" class="primary" type="button">
+              Connect
+            </button>
+          </div>
+        </div>
+        <p class="tagline">
+          Generate, transform, and export OpenTelemetry data without wiring a
+          full stack first.
+        </p>
+      </section>
+
+      <details class="guide" open>
+        <summary>How to run</summary>
+        <div class="guide-body">
+          <div class="guide-step">
+            <span class="guide-num">1</span>
+            <p class="guide-text">
+              <strong>One-time setup</strong> — from the repo root:
+              <code>pip install -r requirements.txt</code> then
+              <code>./scripts/build-collector.sh</code>
+            </p>
+          </div>
+          <div class="guide-step">
+            <span class="guide-num">2</span>
+            <p class="guide-text">
+              <strong>Start the server</strong> —
+              <code>python -m agent serve --http-port 8000</code>
+            </p>
+          </div>
+          <div class="guide-step">
+            <span class="guide-num">3</span>
+            <p class="guide-text">
+              <strong>Open this page</strong> at
+              <code>http://127.0.0.1:8000/</code> — it connects automatically.
+            </p>
+          </div>
+          <div class="guide-step">
+            <span class="guide-num">4</span>
+            <p class="guide-text">
+              <strong>Run the pipeline below</strong> — start the collector,
+              then generate telemetry. Watch output in the panel at the bottom.
+            </p>
+          </div>
+        </div>
+      </details>
+
+      <div class="status-strip" id="status"></div>
+
+      <section class="pipeline">
+        <div class="step">
+          <div class="step-head">
+            <span class="step-num">1</span>
+            <span class="step-title">Start collector</span>
+            <span class="step-desc">Required before sending data</span>
+          </div>
+          <div class="btn-row">
+            <button
+              id="step-connect-btn"
+              class="primary"
+              type="button"
+            >
+              Connect / Reconnect
+            </button>
+            <button
+              class="primary"
+              data-action="collector-start-local"
+              type="button"
+            >
+              Local (debug)
+            </button>
+            <button data-action="collector-start-nr" type="button">
+              New Relic
+            </button>
+            <button
+              class="ghost danger"
+              data-action="collector-stop"
+              type="button"
+            >
+              Stop
+            </button>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-head">
+            <span class="step-num">2</span>
+            <span class="step-title">Generate telemetry</span>
+            <span class="step-desc">Pick one pipeline</span>
+          </div>
+          <div class="btn-row">
+            <button class="primary" data-action="run-synthetic" type="button">
+              Synthetic agent · 20s
+            </button>
+            <button data-action="run-ingest" type="button">
+              AI ingest sample
+            </button>
+            <button data-action="run-github" type="button">
+              Start GitHub poll
+            </button>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-head">
+            <span class="step-num">3</span>
+            <span class="step-title">Stop &amp; reset</span>
+            <span class="step-desc">When done experimenting</span>
+          </div>
+          <div class="btn-row">
+            <button data-action="stop-pipeline" type="button">
+              Stop active job
+            </button>
+            <button data-action="stop-github" type="button">
+              Stop GitHub poll
+            </button>
+            <button class="danger" data-action="stop-all" type="button">
+              Stop all &amp; clear logs
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div id="result" class="result"></div>
+
+      <section class="output-section">
+        <div class="output-head">
+          <h2>Output</h2>
+          <button class="ghost" data-action="clear-logs" type="button">
+            Clear
+          </button>
+        </div>
+        <div class="tab-bar" id="tab-bar">
+          <button class="tab active" data-tab="collector" type="button">
+            Collector
+          </button>
+          <button class="tab" data-tab="synthetic" type="button">
+            Synthetic
+          </button>
+          <button class="tab" data-tab="ingest" type="button">AI Ingest</button>
+          <button class="tab" data-tab="github" type="button">GitHub</button>
+          <button class="tab" data-tab="newrelic" type="button">
+            New Relic
+          </button>
+        </div>
+        <div class="log-pane active" data-pane="collector">
+          <pre id="collector-logs">(no logs)</pre>
+        </div>
+        <div class="log-pane" data-pane="synthetic">
+          <pre id="synthetic-logs">(no logs)</pre>
+        </div>
+        <div class="log-pane" data-pane="ingest">
+          <pre id="ingest-logs">(no logs)</pre>
+        </div>
+        <div class="log-pane" data-pane="github">
+          <pre id="github-poll-logs">(no logs)</pre>
+        </div>
+        <div class="log-pane" data-pane="newrelic">
+          <div
+            style="
+              display: flex;
+              justify-content: flex-end;
+              margin-bottom: 8px;
+            "
+          >
+            <button
+              class="ghost"
+              data-action="refresh-newrelic"
+              type="button"
+            >
+              Refresh
+            </button>
+          </div>
+          <pre id="newrelic-data">(not loaded — start collector in New Relic mode, then refresh)</pre>
+        </div>
+      </section>
+
+      <details class="advanced">
+        <summary>Advanced — API base URL</summary>
+        <div class="advanced-body">
+          <input id="api-base" type="text" placeholder="http://127.0.0.1:8000" />
+          <button id="reconnect-btn" type="button">Reconnect</button>
+        </div>
+      </details>
+    </main>
+
+    <script>
+      const statusNode = document.getElementById("status");
+      const collectorLogsNode = document.getElementById("collector-logs");
+      const syntheticLogsNode = document.getElementById("synthetic-logs");
+      const githubPollLogsNode = document.getElementById("github-poll-logs");
+      const ingestLogsNode = document.getElementById("ingest-logs");
+      const newRelicDataNode = document.getElementById("newrelic-data");
+      const resultNode = document.getElementById("result");
+      const apiBaseInput = document.getElementById("api-base");
+      const connectionChip = document.getElementById("connection-chip");
+      const reconnectBtn = document.getElementById("reconnect-btn");
+      const heroConnectBtn = document.getElementById("hero-connect-btn");
+      const stepConnectBtn = document.getElementById("step-connect-btn");
+      const actionButtons = [...document.querySelectorAll("[data-action]")];
+      const tabs = [...document.querySelectorAll(".tab[data-tab]")];
+      const panes = [...document.querySelectorAll(".log-pane[data-pane]")];
+
+      function detectApiBase() {
+        if (window.location.protocol.startsWith("http")) {
+          return window.location.origin;
+        }
+        return "http://127.0.0.1:8000";
+      }
+
+      let apiBase = localStorage.getItem("otel_ui_api_base") || detectApiBase();
+      apiBaseInput.value = apiBase;
+      let latestStatus = null;
+      let backendConnected = false;
+      let statusInterval = null;
+
+      function setConnection(ok, text) {
+        backendConnected = ok;
+        connectionChip.innerHTML = `
+          <span class="dot ${ok ? "ok" : "bad"}"></span>
+          <span>${text}</span>
+        `;
+      }
+
+      function renderStatus(data) {
+        latestStatus = data;
+        const items = [
+          {
+            label: "Collector",
+            ok: data.collector.running,
+            detail: data.collector.mode || "off",
+          },
+          {
+            label: ":4318",
+            ok: data.signals.collector_listening_4318,
+          },
+          {
+            label: "Gemini",
+            ok: data.gemini_api_key_set,
+          },
+          {
+            label: "New Relic key",
+            ok: data.signals.new_relic_key_set,
+          },
+          {
+            label: "GitHub token",
+            ok: data.signals.github_token_set,
+          },
+        ];
+
+        const jobName = data.job.name;
+        if (data.job.running && jobName) {
+          items.push({ label: `Job: ${jobName}`, ok: true });
+        }
+
+        statusNode.innerHTML = items
+          .map(
+            ({ label, ok, detail }) => `
+            <span class="status-item ${ok ? "ok" : ""}">
+              <span class="dot ${ok ? "ok" : ""}"></span>
+              ${label}${detail ? ` · ${detail}` : ""}
+            </span>
+          `
+          )
+          .join("");
+      }
+
+      function setActiveTab(name) {
+        for (const tab of tabs) {
+          tab.classList.toggle("active", tab.dataset.tab === name);
+        }
+        for (const pane of panes) {
+          pane.classList.toggle("active", pane.dataset.pane === name);
+        }
+      }
+
+      for (const tab of tabs) {
+        tab.addEventListener("click", () => setActiveTab(tab.dataset.tab));
+      }
+
+      async function readJsonResponse(resp) {
+        const text = await resp.text();
+        if (!text) return {};
+        try {
+          return JSON.parse(text);
+        } catch {
+          return { detail: text };
+        }
+      }
+
+      async function apiGet(path) {
+        const resp = await fetch(`${apiBase}${path}`, { method: "GET" });
+        const data = await readJsonResponse(resp);
+        if (!resp.ok) {
+          throw new Error(data.detail || `HTTP ${resp.status}`);
+        }
+        return data;
+      }
+
+      async function apiPost(path, body = undefined) {
+        const hasBody = body !== undefined;
+        const resp = await fetch(`${apiBase}${path}`, {
+          method: "POST",
+          headers: hasBody ? { "Content-Type": "application/json" } : undefined,
+          body: hasBody ? JSON.stringify(body) : undefined,
+        });
+        const data = await readJsonResponse(resp);
+        if (!resp.ok) {
+          throw new Error(data.detail || `HTTP ${resp.status}`);
+        }
+        return data;
+      }
+
+      async function refreshStatusAndLogs() {
+        const [statusData, logsData] = await Promise.all([
+          apiGet("/api/status"),
+          apiGet("/api/logs"),
+        ]);
+
+        renderStatus(statusData);
+        collectorLogsNode.textContent =
+          (logsData.collector || []).join("\n") || "(no logs)";
+        syntheticLogsNode.textContent =
+          (logsData.synthetic || []).join("\n") || "(no logs)";
+        githubPollLogsNode.textContent =
+          (logsData.github_poll || []).join("\n") || "(no logs)";
+        ingestLogsNode.textContent =
+          (logsData.ingest || []).join("\n") || "(no logs)";
+        renderNewRelicOutput(logsData);
+      }
+
+      async function refreshNewRelicSummary() {
+        const data = await apiGet("/api/newrelic/summary");
+        newRelicDataNode.textContent = JSON.stringify(data, null, 2);
+        newRelicDataNode.dataset.source = "query";
+        setActiveTab("newrelic");
+      }
+
+      function renderNewRelicOutput(logsData) {
+        const collectorLines = logsData.collector || [];
+        const nrLines = collectorLines.filter((line) => {
+          const text = String(line).toLowerCase();
+          return (
+            text.includes("newrelic") ||
+            text.includes("otlp.nr-data.net") ||
+            text.includes("otlphttp/newrelic")
+          );
+        });
+        if (!nrLines.length) return;
+        if (newRelicDataNode.dataset.source === "query") return;
+        newRelicDataNode.textContent = nrLines.join("\n");
+        newRelicDataNode.dataset.source = "collector";
+      }
+
+      function setButtonsDisabled(disabled) {
+        for (const button of actionButtons) {
+          const action = button.dataset.action;
+          if (!disabled) {
+            button.disabled = false;
+            continue;
+          }
+          button.disabled =
+            action !== "collector-stop" &&
+            action !== "stop-github" &&
+            action !== "stop-pipeline" &&
+            action !== "stop-all" &&
+            action !== "clear-logs" &&
+            action !== "refresh-newrelic";
+        }
+      }
+
+      function setApiBase(nextBase) {
+        apiBase = nextBase.replace(/\/+$/, "");
+        apiBaseInput.value = apiBase;
+        localStorage.setItem("otel_ui_api_base", apiBase);
+      }
+
+      function showResult(text, isError = false) {
+        resultNode.textContent = text;
+        resultNode.classList.toggle("error", isError);
+      }
+
+      async function reconnect() {
+        const typed = apiBaseInput.value.trim();
+        setApiBase(typed || detectApiBase());
+        setConnection(false, "Connecting…");
+        await refreshStatusAndLogs();
+        setConnection(true, "Connected");
+        const busy = latestStatus?.job?.running;
+        setButtonsDisabled(Boolean(busy));
+      }
+
+      async function runAction(action) {
+        if (!backendConnected) {
+          showResult("Not connected — check that the server is running.", true);
+          return;
+        }
+        showResult("Running…");
+        setButtonsDisabled(true);
+        try {
+          if (action === "collector-start-local") {
+            await apiPost("/api/collector/start", { mode: "local" });
+            setActiveTab("collector");
+          } else if (action === "collector-start-nr") {
+            await apiPost("/api/collector/start", { mode: "newrelic" });
+            setActiveTab("newrelic");
+            newRelicDataNode.dataset.source = "";
+            try {
+              await refreshNewRelicSummary();
+            } catch {
+              // If query credentials are missing, collector-side exporter logs
+              // will still appear via refreshStatusAndLogs().
+            }
+          } else if (action === "collector-stop") {
+            await apiPost("/api/collector/stop");
+          } else if (action === "run-synthetic") {
+            await apiPost("/api/pipelines/synthetic-agent", {
+              duration: 20,
+              interval: 0.5,
+            });
+            setActiveTab("synthetic");
+          } else if (action === "run-ingest") {
+            await apiPost("/api/pipelines/ingest-sample");
+            setActiveTab("ingest");
+          } else if (action === "run-github") {
+            await apiPost("/api/pipelines/github-poll", {
+              once: false,
+              interval_sec: 30,
+            });
+            setActiveTab("github");
+          } else if (action === "stop-github") {
+            try {
+              await apiPost("/api/pipelines/github-poll/stop");
+            } catch (err) {
+              if (
+                String(err.message).includes("Not Found") ||
+                String(err.message).includes("Cannot POST")
+              ) {
+                throw new Error(
+                  "Stop endpoint unavailable — restart `python -m agent serve`."
+                );
+              }
+              throw err;
+            }
+          } else if (action === "stop-pipeline") {
+            await apiPost("/api/pipelines/stop");
+          } else if (action === "stop-all") {
+            await apiPost("/api/stop-all");
+            collectorLogsNode.textContent = "(no logs)";
+            syntheticLogsNode.textContent = "(no logs)";
+            githubPollLogsNode.textContent = "(no logs)";
+            ingestLogsNode.textContent = "(no logs)";
+            newRelicDataNode.textContent =
+              "(not loaded — start collector in New Relic mode, then refresh)";
+            newRelicDataNode.dataset.source = "";
+          } else if (action === "refresh-newrelic") {
+            await refreshNewRelicSummary();
+          } else if (action === "clear-logs") {
+            await apiPost("/api/logs/clear");
+            collectorLogsNode.textContent = "(no logs)";
+            syntheticLogsNode.textContent = "(no logs)";
+            githubPollLogsNode.textContent = "(no logs)";
+            ingestLogsNode.textContent = "(no logs)";
+            newRelicDataNode.textContent =
+              "(not loaded — start collector in New Relic mode, then refresh)";
+            newRelicDataNode.dataset.source = "";
+          }
+          showResult("Done.");
+        } catch (err) {
+          const text = String(err.message || err);
+          if (text.includes("currently running")) {
+            showResult(`Blocked — stop the active job first.`, true);
+          } else if (text.includes("429")) {
+            showResult("Gemini rate limit (429) — wait and retry.", true);
+          } else if (text.includes("not listening")) {
+            showResult("Start the collector first (Step 1).", true);
+          } else if (text.includes("GEMINI_API_KEY")) {
+            showResult("Set GEMINI_API_KEY to use AI ingest.", true);
+          } else if (text.includes("GitHub token")) {
+            showResult("Set GITHUB_TOKEN or create .github_token.", true);
+          } else if (text.includes("New Relic query not configured")) {
+            showResult(
+              "Set NEW_RELIC_USER_API_KEY and NEW_RELIC_ACCOUNT_ID.",
+              true
+            );
+          } else {
+            showResult(text, true);
+          }
+        } finally {
+          try {
+            await refreshStatusAndLogs();
+            setConnection(true, "Connected");
+          } catch (err) {
+            setConnection(false, "Disconnected");
+            showResult(`Connection lost: ${err.message}`, true);
+          }
+          const busy = latestStatus?.job?.running;
+          setButtonsDisabled(Boolean(busy));
+        }
+      }
+
+      for (const button of actionButtons) {
+        button.addEventListener("click", () => runAction(button.dataset.action));
+      }
+
+      async function handleReconnectClick() {
+        try {
+          await reconnect();
+          if (statusInterval !== null) clearInterval(statusInterval);
+          statusInterval = setInterval(async () => {
+            if (!backendConnected) return;
+            try {
+              await refreshStatusAndLogs();
+            } catch {
+              setConnection(false, "Disconnected");
+              setButtonsDisabled(true);
+            }
+          }, 2000);
+        } catch (err) {
+          showResult(`Connection failed: ${err.message}`, true);
+          setConnection(false, "Disconnected");
+          setButtonsDisabled(true);
+        }
+      }
+
+      reconnectBtn.addEventListener("click", handleReconnectClick);
+      heroConnectBtn.addEventListener("click", handleReconnectClick);
+      stepConnectBtn.addEventListener("click", handleReconnectClick);
+
+      async function boot() {
+        setConnection(false, "Connecting…");
+        setButtonsDisabled(true);
+        try {
+          await reconnect();
+          statusInterval = setInterval(async () => {
+            if (!backendConnected) return;
+            try {
+              await refreshStatusAndLogs();
+            } catch {
+              setConnection(false, "Disconnected");
+              setButtonsDisabled(true);
+            }
+          }, 2000);
+        } catch (err) {
+          showResult(
+            "Could not connect — run `python -m agent serve` then refresh.",
+            true
+          );
+          setConnection(false, "Disconnected");
+        }
+      }
+
+      boot();
+    </script>
+  </body>
+</html>
